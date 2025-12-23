@@ -17,13 +17,13 @@ if st.button("Tekshirish", type="primary"):
     else:
         vec = vectorizer.transform([text])
         pred = model.predict(vec)[0]
-        prob = model.predict_proba(vec)[0][1 if pred == 1 else 0]
+        prob_spam = model.predict_proba(vec)[0][1]  # Har doim spam klassining ehtimoli (index 1)
 
         if pred == 1:
-            st.error(f"🚨 SPAM aniqlandi! (Ehtimol: {prob:.1%})")
+            st.error(f"🚨 SPAM aniqlandi! (Ehtimol: {prob_spam:.1%})")
             st.info("Ehtiyot bo'ling – bu reklama yoki firibgarlik bo'lishi mumkin.")
         else:
-            st.success(f"✅ Haqiqiy xabar (HAM) (Spam ehtimoli: {prob:.1%})")
+            st.success(f"✅ Haqiqiy xabar (HAM) (Spam ehtimoli: {prob_spam:.1%})")
         
         st.write("**Sizning xabaringiz:**")
         st.code(text)
