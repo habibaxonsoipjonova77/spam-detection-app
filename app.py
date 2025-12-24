@@ -1,10 +1,5 @@
 import streamlit as st
-import pandas as pd
-
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from lightgbm import LGBMClassifier
-from sklearn.metrics import accuracy_score
+import pickle
 
 # ===============================
 # STREAMLIT CONFIG
@@ -15,73 +10,28 @@ st.set_page_config(
     layout="centered"
 )
 
-# ===============================
-# DATASET LOAD
-# ===============================
-@st.cache_data
-def load_data():
-    df = pd.read_csv(
-        "SMSSpamCollection",
-        sep="\t",
-        header=None,
-        names=["label", "text"]
-    )
-    df["label"] = df["label"].map({"ham": 0, "spam": 1})
-    return df
-
-df = load_data()
+st.title("📩 SMS / Email Spam Detector")
 
 # ===============================
-# TRAIN / TEST SPLIT
-# ===============================
-X_train, X_test, y_train, y_test = train_test_split(
-    df["text"],
-    df["label"],
-    test_size=0.2,
-    random_state=42,
-    stratify=df["label"]
-)
-
-# ===============================
-# VECTORIZER
+# MODEL & VECTORIZER LOAD
 # ===============================
 @st.cache_resource
-def train_vectorizer_and_model(X_train, y_train):
-    vectorizer = TfidfVectorizer(
-        lowercase=True,
-        stop_words="english",
-        max_features=5000
-    )
+def load_model():
+    with open("spam_model_lgb.pkl", "rb") as f:
+        model = pickle.load(f)
 
-    X_train_vec = vectorizer.fit_transform(X_train)
+    with open("tfidf_vectorizer.pkl", "rb") as f:
+        vectorizer = pickle.load(f)
 
-    model = LGBMClassifier(
-        n_estimators=200,
-        learning_rate=0.1,
-        class_weight="balanced",
-        random_state=42
-    )
+    return model, vectorizer
 
-    model.fit(X_train_vec, y_train)
-    return vectorizer, model
+model, vectorizer = load_model()
 
-vectorizer, model = train_vectorizer_and_model(X_train, y_train)
+st.success("✅ Model va vectorizer muvaffaqiyatli yuklandi")
 
 # ===============================
-# MODEL ACCURACY
+# INPUT UI
 # ===============================
-X_test_vec = vectorizer.transform(X_test)
-y_pred = model.predict(X_test_vec)
-accuracy = accuracy_score(y_test, y_pred)
-
-# ===============================
-# UI
-# ===============================
-st.title("📩 SMS / Email Spam Detector")
-st.write(f"📊 Model aniqligi (Accuracy): **{accuracy:.2%}**")
-
-st.markdown("---")
-
 text = st.text_area(
     "Xabar matnini kiriting:",
     height=150,
@@ -96,14 +46,17 @@ threshold = st.slider(
     step=0.05
 )
 
+# ===============================
+# PREDICTION
+# ===============================
 if st.button("🔍 Tekshirish"):
     if text.strip() == "":
         st.warning("⚠️ Iltimos, xabar matnini kiriting.")
     else:
         vec = vectorizer.transform([text])
 
-        # Prediction
-        spam_prob = model.predict_proba(vec)[0][1]  # HAR DOIM spam = index 1
+        # HAR DOIM spam klassi = index 1
+        spam_prob = model.predict_proba(vec)[0][1]
 
         if spam_prob >= threshold:
             st.error(f"🚨 SPAM aniqlandi! (Spam ehtimoli: {spam_prob:.1%})")
@@ -118,4 +71,4 @@ if st.button("🔍 Tekshirish"):
 # FOOTER
 # ===============================
 st.markdown("---")
-st.caption("🚀 LightGBM + SMS Spam Collection | Streamlit App")
+st.caption("🚀 LightGBM + TF-IDF | Pretrained Model")
