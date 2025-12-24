@@ -1,12 +1,16 @@
 import streamlit as st
 import pickle
 
+# Model va vectorizerni oldindan tayyorlagan bo'lsangiz
+with open("spam_model_lgb.pkl", "wb") as f:
+    pickle.dump(model, f)
+
+with open("tfidf_vectorizer.pkl", "wb") as f:
+    pickle.dump(vectorizer, f)
+
+
 @st.cache_data
-def load_model():
-    with open("spam_model_lgb.pkl", "rb") as f:
-        model = pickle.load(f)
-    with open("tfidf_vectorizer.pkl", "rb") as f:
-        vectorizer = pickle.load(f)
+
     return model, vectorizer
 
 def main():
