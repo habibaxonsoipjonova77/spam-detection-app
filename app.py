@@ -1,9 +1,7 @@
 import streamlit as st
 import pickle
-import numpy as np
 
-# Model va vectorizerni yuklash funksiyasi
-@st.cache_data(show_spinner=True)
+@st.cache_data
 def load_model():
     with open("spam_model_lgb.pkl", "rb") as f:
         model = pickle.load(f)
@@ -14,7 +12,11 @@ def load_model():
 def main():
     st.title("SMS va Email Spam Detector")
 
-    model, vectorizer = load_model()
+    try:
+        model, vectorizer = load_model()
+    except Exception as e:
+        st.error(f"Model yoki vectorizer yuklashda xatolik: {e}")
+        return
 
     text = st.text_area("Xabarni kiriting:")
 
@@ -22,10 +24,10 @@ def main():
         if not text.strip():
             st.warning("Iltimos, xabarni kiriting!")
             return
-        
+
         vec = vectorizer.transform([text])
         pred = model.predict(vec)[0]
-        prob_spam = model.predict_proba(vec)[0][1]  # Spam ehtimoli
+        prob_spam = model.predict_proba(vec)[0][1]
 
         if pred == 1:
             st.error(f"🚨 SPAM aniqlandi! (Ehtimol: {prob_spam:.1%})")
