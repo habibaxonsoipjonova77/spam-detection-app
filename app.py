@@ -1,45 +1,50 @@
 import streamlit as st
-import pickle
+import joblib
+import os
 
-# Model va vectorizerni yuklash
-@st.cache_data
-def load_model():
+# Sahifa sarlavhasi
+st.set_page_config(page_title="Spam Detector", page_icon="📨")
+
+@st.cache_resource
+def load_assets():
     try:
-        with open("spam_model_lgb.pkl", "rb") as f:
-            model = pickle.load(f)
-        with open("tfidf_vectorizer.pkl", "rb") as f:
-            vectorizer = pickle.load(f)
+        # Fayllar mavjudligini tekshirish
+        if not os.path.exists("spam_model_lgb.pkl") or not os.path.exists("tfidf_vectorizer.pkl"):
+            return None, None
+        
+        model = joblib.load("spam_model_lgb.pkl")
+        vectorizer = joblib.load("tfidf_vectorizer.pkl")
         return model, vectorizer
     except Exception as e:
-        st.error(f"Model yoki vectorizer yuklashda xatolik: {e}")
+        st.error(f"Yuklashda xatolik: {e}")
         return None, None
 
 def main():
     st.title("📨 SMS va Email Spam Detector")
+    st.markdown("Xabaringizni pastga kiriting va biz uni spam yoki yo'qligini aniqlaymiz.")
 
-    model, vectorizer = load_model()
-    if model is None or vectorizer is None:
-        st.stop()
+    model, vectorizer = load_assets()
 
-    text = st.text_area("Xabarni kiriting:")
+    if model is None:
+        st.error("❌ Model fayllari topilmadi! Iltimos, .pkl fayllari GitHub'ga to'g'ri yuklanganiga ishonch hosil qiling.")
+        return
+
+    text = st.text_area("Xabarni kiriting:", height=150)
 
     if st.button("Tekshirish"):
-        if not text.strip():
-            st.warning("Iltimos, xabarni kiriting!")
-            return
+        if text.strip():
+            # Bashorat qilish
+            vec = vectorizer.transform([text])
+            prediction = model.predict(vec)[0]
+            probability = model.predict_proba(vec)[0][1]
 
-        vec = vectorizer.transform([text])
-        pred = model.predict(vec)[0]
-        prob_spam = model.predict_proba(vec)[0][1]
-
-        if pred == 1:
-            st.error(f"🚨 SPAM aniqlandi! (Ehtimol: {prob_spam:.1%})")
-            st.info("Ehtiyot bo'ling – bu reklama yoki firibgarlik bo'lishi mumkin.")
+            st.divider()
+            if prediction == 1:
+                st.error(f"🚨 **SPAM aniqlandi!** (Ehtimollik: {probability:.1%})")
+            else:
+                st.success(f"✅ **Bu haqiqiy xabar (HAM)** (Spam ehtimoli: {probability:.1%})")
         else:
-            st.success(f"✅ Haqiqiy xabar (HAM) (Spam ehtimoli: {prob_spam:.1%})")
-
-        st.write("**Sizning xabaringiz:**")
-        st.code(text)
+            st.warning("Iltimos, matn kiriting!")
 
 if __name__ == "__main__":
     main()
